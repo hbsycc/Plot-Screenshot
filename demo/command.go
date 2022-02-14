@@ -2,15 +2,11 @@ package demo
 
 import (
 	"bytes"
-	"crypto/md5"
-	"encoding/hex"
 	"fmt"
 	"github.com/fogleman/gg"
 	"image"
 	"image/color"
 	"image/draw"
-	"io"
-	"os"
 	"os/exec"
 	"syscall"
 )
@@ -59,10 +55,6 @@ func demo2() {
 	fmt.Println(cmd.ProcessState.Sys().(syscall.WaitStatus).ExitCode)
 	// 输出结果
 	fmt.Println(outBuffer.String())
-
-	// 计算MD5
-	md5Bytes, err := ComputeMd5(`D:\input.png`)
-	fmt.Println("MD5:", hex.EncodeToString(md5Bytes))
 }
 
 func demo3() {
@@ -94,19 +86,4 @@ func demo3() {
 	if err != nil {
 		panic(err)
 	}
-}
-
-func ComputeMd5(filePath string) ([]byte, error) {
-	var result []byte
-	file, err := os.Open(filePath)
-	if err != nil {
-		return result, err
-	}
-	defer file.Close()
-	hash := md5.New()
-	if _, err := io.Copy(hash, file); err != nil {
-		return result, err
-	}
-
-	return hash.Sum(result), nil
 }

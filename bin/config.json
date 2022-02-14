@@ -1,17 +1,19 @@
 {
   "debug": true,
-  "capture": {
-    "count": 24,
-    "thread": 4,
-    "dir": "D:\\Workspaces\\Go\\a.resources.cc\\bin\\test"
+  "media": {
+    "dir": [
+      "D:\\workSpace\\Go\\a.resources.cc\\bin\\media"
+    ],
+    "ext": [
+      ".MP4",
+      ".mkv",
+      ".mpeg",
+      ".wmv"
+    ]
   },
-  "mediaDirs": [
-    "F:\\movie"
-  ],
-  "filterExt": [
-    ".MP4",
-    ".mkv",
-    ".mpeg",
-    ".wmv"
-  ]
+  "capture": {
+    "dir": "D:\\workSpace\\Go\\a.resources.cc\\bin\\test",
+    "count": 24,
+    "thread": 4
+  }
 }

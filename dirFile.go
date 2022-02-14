@@ -18,7 +18,7 @@ var Dirs []string
 var Files []model.File
 
 func MediaDirWalk() (err error) {
-	for _, dir := range config.GetConfig().MediaDirs {
+	for _, dir := range config.GetConfig().Media.Dir {
 		err = walk(dir)
 		if err != nil {
 			return
@@ -45,7 +45,7 @@ func walk(dir string) (err error) {
 				Path: infoPath,
 			}
 
-			isMedia := lib.StringsContains(config.GetConfig().FilterExt, strings.ToLower(f.Ext))
+			isMedia := lib.StringsContains(config.GetConfig().Media.Ext, strings.ToLower(f.Ext))
 			if isMedia {
 				rand.Seed(time.Now().UnixNano())
 				rename := fmt.Sprintf("%v%v", rand.Intn(9999999999999999), f.Ext)
