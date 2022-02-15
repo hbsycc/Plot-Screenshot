@@ -8,13 +8,17 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
+	"github.com/disintegration/imaging"
 	"github.com/fogleman/gg"
+	"image"
 	"image/color"
+	"image/draw"
 	"log"
 	"os"
 	"os/exec"
+	"sort"
 	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -31,12 +35,15 @@ func Capture(file *model.File) (err error) {
 		return
 	}
 
-	err = createCaptures(*file)
+	err = createCaptures(file)
 	if err != nil {
 		return
 	}
 
-	spew.Dump(file)
+	err = mergeCaptures(file)
+	if err != nil {
+		return
+	}
 
 	return
 }
@@ -50,7 +57,7 @@ func recoverName(file *model.File) {
 	err := os.Rename(file.RePath, file.Path)
 	if err != nil {
 		fmt.Println(err)
-		log.Fatalf("恢复名称失败：%v -> %v", file.ReName, file.Name)
+		log.Fatalf("恢复名称失败：%v -> %v", file.XxHash, file.Name)
 	}
 }
 
@@ -62,26 +69,25 @@ func recoverName(file *model.File) {
 // @param durationSeconds
 // @return err
 //
-func createCaptures(file model.File) (err error) {
+func createCaptures(file *model.File) (err error) {
 	lib.DebugLog("开始截图\n", "ffmpeg")
 	start := time.Now()
 
 	// 创建临时目录
-	_, err = os.Stat(config.GetConfig().Capture.Dir)
+	lib.DebugLog(fmt.Sprintf("创建临时目录(文件xxhash):%v\n", file.TempDir), "dir")
+	_, err = os.Stat(file.TempDir)
 	if err != nil && os.IsNotExist(err) {
-		err = os.MkdirAll(config.GetConfig().Capture.Dir, 777)
-		return
-	}
-	tempDir, err := os.MkdirTemp(config.GetConfig().Capture.Dir, "*")
-	lib.DebugLog(fmt.Sprintf("创建临时目录:%v\n", tempDir), "dir")
-	if err != nil {
-		return
+		if os.IsNotExist(err) {
+			err = os.MkdirAll(file.TempDir, 777)
+		} else {
+			return
+		}
 	}
 
 	// 准备命令数组
 	commands := make([]model.Capture, config.GetConfig().Capture.Count)
 	for i := 0; i < config.GetConfig().Capture.Count; i++ {
-		output := fmt.Sprintf("%v\\%v.jpg", tempDir, i+1)
+		output := fmt.Sprintf("%v\\%v.jpg", file.TempDir, i+1)
 
 		captureTime := file.MediaInfo.DurationSeconds / int64(config.GetConfig().Capture.Count) * int64(i)
 		item := model.Capture{
@@ -111,7 +117,7 @@ func createCaptures(file model.File) (err error) {
 
 		processCount += 1
 		wg.Add(1)
-		go func() {
+		go func(file *model.File) {
 			e := ffmpegCaptures(ctx, command.Command)
 			// 发生错误，通知所有协程取消
 			if e != nil {
@@ -127,7 +133,7 @@ func createCaptures(file model.File) (err error) {
 			}
 
 			wg.Done()
-		}()
+		}(file)
 		// 等待当前线程组的所有任务结束，发生错误的话直接返回
 		if processCount == config.GetConfig().Capture.Thread {
 			wg.Wait()
@@ -142,11 +148,11 @@ func createCaptures(file model.File) (err error) {
 		}
 	}
 
-	lib.DebugLog(fmt.Sprintf("截图完成：%v,耗时:%v\n", tempDir, time.Since(start)), "ffmpeg")
+	lib.DebugLog(fmt.Sprintf("截图完成：%v,耗时:%v\n", file.TempDir, time.Since(start)), "ffmpeg")
 
 	// 删除临时文件夹
 	if !config.GetConfig().Debug {
-		err = os.RemoveAll(tempDir)
+		err = os.RemoveAll(file.TempDir)
 		if err != nil {
 			return
 		}
@@ -196,16 +202,16 @@ func ffmpegCaptures(ctx context.Context, commandStr string) (err error) {
 func drawTime(capture model.Capture) (err error) {
 	lib.DebugLog(fmt.Sprintf("截图文件:%v,截取时间:%v\n", capture.Image, capture.TimeDuration), "TimeDuration")
 
-	image, err := gg.LoadImage(capture.Image)
+	img, err := gg.LoadImage(capture.Image)
 	if err != nil {
 		return
 	}
 
-	width := image.Bounds().Dx()
-	height := image.Bounds().Dy()
+	width := img.Bounds().Dx()
+	height := img.Bounds().Dy()
 	fontSize := width / 100 * 3
 
-	dc := gg.NewContextForImage(image)
+	dc := gg.NewContextForImage(img)
 	err = dc.LoadFontFace("C:\\Windows\\Fonts\\Arial.ttf", float64(fontSize))
 	if err != nil {
 		return err
@@ -220,6 +226,64 @@ func drawTime(capture model.Capture) (err error) {
 
 // mergeCaptures
 // @Description: 合并截图
-func mergeCaptures() {
+func mergeCaptures(file *model.File) (err error) {
+	lib.DebugLog("开始合成\n", "merge")
+	startTime := time.Now()
 
+	// 读取临时目录下截图文件、按文件名排序
+	var capturesName []string
+	read, err := os.ReadDir(file.TempDir)
+	if err != nil {
+		return
+	}
+	for _, entry := range read {
+		if !entry.IsDir() {
+			info, err := entry.Info()
+			if err != nil {
+				return err
+			}
+			capturesName = append(capturesName, info.Name())
+		}
+	}
+	sort.SliceStable(capturesName, func(i, j int) bool {
+		iName, _ := strconv.Atoi(strings.Split(capturesName[i], ".")[0])
+		jName, _ := strconv.Atoi(strings.Split(capturesName[j], ".")[0])
+		return iName < jName
+	})
+
+	// 合成大图
+	var (
+		column    = config.GetConfig().Capture.Grid.Column
+		columnGap = config.GetConfig().Capture.Grid.ColumnGap
+		row       = config.GetConfig().Capture.Grid.Row
+		rowGap    = config.GetConfig().Capture.Grid.RowGap
+		bgWidth   = file.MediaInfo.Width*column + (column-1)*columnGap
+		bgHeight  = file.MediaInfo.Height*row + (row-1)*rowGap
+	)
+	rect := image.Rect(0, 0, bgWidth, bgHeight)
+	bg := image.NewRGBA(rect)
+	draw.Draw(bg, rect.Bounds(), &image.Uniform{C: color.White}, image.Pt(500, 500), draw.Src)
+	dc := gg.NewContextForRGBA(bg)
+	for i, cn := range capturesName {
+		path := fmt.Sprintf("%v//%v", file.TempDir, cn)
+		c, err := gg.LoadImage(path)
+		if err != nil {
+			fmt.Println(err)
+			return err
+		}
+
+		xIndex := i % column
+		x := (xIndex * columnGap) + (xIndex * file.MediaInfo.Width)
+		yIndex := i / column
+		y := (yIndex * rowGap) + (yIndex * file.MediaInfo.Height)
+		dc.DrawImage(c, x, y)
+	}
+
+	out := fmt.Sprintf("%v\\%v.jpg", config.GetConfig().Capture.Dir, file.XxHash)
+	zoom := imaging.Resize(dc.Image(), 4096, 0, imaging.Lanczos)
+	err = gg.SaveJPG(out, zoom, config.GetConfig().Capture.Quality)
+
+	lib.DebugLog(fmt.Sprintf("合成完成：%v,耗时:%v\n", out, time.Since(startTime)), "merge")
+
+	return
 }

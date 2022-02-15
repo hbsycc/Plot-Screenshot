@@ -5,7 +5,6 @@ import (
 	"a.resources.cc/lib"
 	"a.resources.cc/model"
 	"fmt"
-	"math/rand"
 	"os"
 	"path"
 	"path/filepath"
@@ -19,6 +18,10 @@ var Files []model.File
 
 func MediaDirWalk() (err error) {
 	for _, dir := range config.GetConfig().Media.Dir {
+		if _, err := os.Stat(dir); err != nil {
+			return err
+		}
+
 		err = walk(dir)
 		if err != nil {
 			return
@@ -29,8 +32,9 @@ func MediaDirWalk() (err error) {
 }
 
 func walk(dir string) (err error) {
-
+	fmt.Println(dir)
 	err = filepath.Walk(dir, func(infoPath string, info os.FileInfo, err error) error {
+		fmt.Println(info)
 		if info.IsDir() {
 			dirName := info.Name()
 			childDir := infoPath + "\\" + dirName
@@ -47,16 +51,15 @@ func walk(dir string) (err error) {
 
 			isMedia := lib.StringsContains(config.GetConfig().Media.Ext, strings.ToLower(f.Ext))
 			if isMedia {
-				rand.Seed(time.Now().UnixNano())
-				rename := fmt.Sprintf("%v%v", rand.Intn(9999999999999999), f.Ext)
-				f.ReName = rename
-				f.RePath = fmt.Sprintf("%v\\%v", f.Dir, rename)
-
-				//if sha1, err := checksum.SHA1sum(f.Path); err != nil {
-				//	return err
-				//} else {
-				//	f.SHA1 = sha1
-				//}
+				startTime := time.Now()
+				if hash, err := lib.XxHash(f.Path); err != nil {
+					return err
+				} else {
+					f.XxHash = hash
+					f.TempDir = fmt.Sprintf("%v\\%v", config.GetConfig().Capture.Dir, hash)
+					f.RePath = fmt.Sprintf("%v\\%v", f.Dir, hash+f.Ext)
+				}
+				lib.DebugLog(fmt.Sprintf("对文件xxhash,耗时：%v\n", time.Since(startTime)), "hash")
 
 				Files = append(Files, f)
 			}

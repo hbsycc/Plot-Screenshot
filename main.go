@@ -3,7 +3,6 @@ package main
 import (
 	"a.resources.cc/capture"
 	"a.resources.cc/config"
-	"a.resources.cc/demo"
 	"log"
 )
 
@@ -20,10 +19,10 @@ func init() {
 }
 
 func main() {
-	demo.Hash()
-	return
-	_ = capture.Capture(&Files[0])
-	return
+	//if err := capture.Capture(&Files[0]); err != nil {
+	//	fmt.Println(err)
+	//}
+	//return
 
 	for _, file := range Files {
 		if err := capture.Capture(&file); err != nil {

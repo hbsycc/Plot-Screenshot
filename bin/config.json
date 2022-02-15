@@ -2,7 +2,7 @@
   "debug": true,
   "media": {
     "dir": [
-      "D:\\workSpace\\Go\\a.resources.cc\\bin\\media"
+      "D:\\Workspaces\\Go\\a.resources.cc\\bin\\media"
     ],
     "ext": [
       ".MP4",
@@ -12,8 +12,15 @@
     ]
   },
   "capture": {
-    "dir": "D:\\workSpace\\Go\\a.resources.cc\\bin\\test",
+    "dir": "D:\\Workspaces\\Go\\a.resources.cc\\bin\\test",
     "count": 24,
-    "thread": 4
+    "thread": 4,
+    "quality": 100,
+    "grid": {
+      "column": 4,
+      "row": 4,
+      "columnGap": 20,
+      "rowGap": 20
+    }
   }
 }

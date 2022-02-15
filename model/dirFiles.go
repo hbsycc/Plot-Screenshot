@@ -2,12 +2,12 @@ package model
 
 type File struct {
 	Name      string
-	ReName    string
+	XxHash    string
 	Ext       string
 	Dir       string
+	TempDir   string
 	Path      string
 	RePath    string
-	SHA1      string
 	MediaInfo struct {
 		DurationSeconds    int64
 		DurationFormat     string
