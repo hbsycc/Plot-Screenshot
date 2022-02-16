@@ -13,14 +13,13 @@ import (
 	"time"
 )
 
-//
-//  getMediaInfo
+// getMediaInfo
 //  @Description: 获取媒体元信息
-//  @param file
-//  @return err
-//
+// @param file
+// @return err
 func getMediaInfo(file *model.File) (err error) {
-	commandStr := fmt.Sprintf("ffprobe -print_format json  -show_streams %v", file.RePath)
+	// ffprobe 命令行详解	https://blog.csdn.net/ssehs/article/details/106625342
+	commandStr := fmt.Sprintf("ffprobe -show_format -show_streams -select_streams v -print_format json -show_entries format=filename,format_name,format_long_name,size:stream=duration,width,height,display_aspect_ratio,r_frame_rate,bit_rate,codec_name,pix_fmt,codec_long_name,avg_frame_rate -loglevel error %v", file.RePath)
 	lib.DebugLog(fmt.Sprintf("执行命令:%v", commandStr), "ffprobe")
 
 	command := exec.Command("cmd", "/C", commandStr)

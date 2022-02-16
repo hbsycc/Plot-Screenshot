@@ -14,7 +14,8 @@
   "capture": {
     "dir": "D:\\workSpace\\Go\\a.resources.cc\\bin\\test",
     "thread": 4,
-    "quality": 100,
+    "quality": 80,
+    "width": 2048,
     "grid": {
       "column": 4,
       "row": 4,

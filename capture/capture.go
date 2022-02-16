@@ -8,6 +8,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"github.com/davecgh/go-spew/spew"
 	"github.com/disintegration/imaging"
 	"github.com/fogleman/gg"
 	"image"
@@ -253,16 +254,17 @@ func mergeCaptures(file *model.File) (err error) {
 
 	// 合成大图
 	var (
-		column    = config.GetConfig().Capture.Grid.Column
-		columnGap = config.GetConfig().Capture.Grid.ColumnGap
-		row       = config.GetConfig().Capture.Grid.Row
-		rowGap    = config.GetConfig().Capture.Grid.RowGap
-		bgWidth   = file.MediaInfo.Width*column + (column-1)*columnGap
-		bgHeight  = file.MediaInfo.Height*row + (row-1)*rowGap
+		column          = config.GetConfig().Capture.Grid.Column
+		columnGap       = config.GetConfig().Capture.Grid.ColumnGap
+		row             = config.GetConfig().Capture.Grid.Row
+		rowGap          = config.GetConfig().Capture.Grid.RowGap
+		mediaInfoHeight = int(float32(file.MediaInfo.Height) * 1.6) // 信息区域高度
+		bgWidth         = file.MediaInfo.Width*column + (column-1)*columnGap
+		bgHeight        = file.MediaInfo.Height*row + (row-1)*rowGap + mediaInfoHeight
 	)
 	rect := image.Rect(0, 0, bgWidth, bgHeight)
 	bg := image.NewRGBA(rect)
-	draw.Draw(bg, rect.Bounds(), &image.Uniform{C: color.White}, image.Pt(500, 500), draw.Src)
+	draw.Draw(bg, rect.Bounds(), &image.Uniform{C: color.White}, image.Pt(0, 0), draw.Src)
 	dc := gg.NewContextForRGBA(bg)
 	for i, cn := range capturesName {
 		path := fmt.Sprintf("%v//%v", file.TempDir, cn)
@@ -275,13 +277,21 @@ func mergeCaptures(file *model.File) (err error) {
 		x := (xIndex * columnGap) + (xIndex * file.MediaInfo.Width)
 		yIndex := i / column
 		y := (yIndex * rowGap) + (yIndex * file.MediaInfo.Height)
-		dc.DrawImage(c, x, y)
+		dc.DrawImage(c, x, y+mediaInfoHeight)
 	}
 
-	out := fmt.Sprintf("%v\\%v.jpg", config.GetConfig().Capture.Dir, file.XxHash)
-	zoom := imaging.Resize(dc.Image(), 4096, 0, imaging.Lanczos)
-	err = gg.SaveJPG(out, zoom, config.GetConfig().Capture.Quality)
+	// 名称、XxHash、大小、尺寸、时长、Meta
+	spew.Dump(file)
+	os.Exit(0)
 
+	// 缩放、保存图片
+	out := fmt.Sprintf("%v\\%v.jpg", config.GetConfig().Capture.Dir, file.XxHash)
+	outImage := dc.Image()
+	resizeWidth := config.GetConfig().Capture.ResizeWidth
+	if resizeWidth > 0 {
+		outImage = imaging.Resize(outImage, resizeWidth, 0, imaging.Lanczos)
+	}
+	err = gg.SaveJPG(out, outImage, config.GetConfig().Capture.Quality)
 	lib.DebugLog(fmt.Sprintf("合成完成：%v,耗时:%v", out, time.Since(startTime)), "merge")
 
 	return

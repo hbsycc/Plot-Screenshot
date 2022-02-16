@@ -4,12 +4,10 @@ import (
 	"a.resources.cc/config"
 	"a.resources.cc/lib"
 	"a.resources.cc/model"
-	"fmt"
 	"os"
 	"path"
 	"path/filepath"
 	"strings"
-	"time"
 )
 
 var Dirs []string
@@ -49,16 +47,6 @@ func walk(dir string) (err error) {
 
 			isMedia := lib.StringsContains(config.GetConfig().Media.Ext, strings.ToLower(f.Ext))
 			if isMedia {
-				startTime := time.Now()
-				if hash, err := lib.XxHash(f.Path); err != nil {
-					return err
-				} else {
-					f.XxHash = hash
-					f.TempDir = fmt.Sprintf("%v\\%v", config.GetConfig().Capture.Dir, hash)
-					f.RePath = fmt.Sprintf("%v\\%v", f.Dir, hash+f.Ext)
-				}
-				lib.DebugLog(fmt.Sprintf("对文件xxhash,耗时：%v\n", time.Since(startTime)), "hash")
-
 				Files = append(Files, f)
 			}
 		}
