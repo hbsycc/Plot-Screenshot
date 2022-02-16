@@ -1,9 +1,7 @@
 {
   "debug": true,
   "media": {
-    "dir": [
-      "D:\\workSpace\\Go\\a.resources.cc\\bin\\media"
-    ],
+    "dir": [],
     "ext": [
       ".MP4",
       ".mkv",
@@ -12,7 +10,7 @@
     ]
   },
   "capture": {
-    "dir": "D:\\workSpace\\Go\\a.resources.cc\\bin\\test",
+    "dir": "D:\\Workspaces\\Go\\a.resources.cc\\bin\\test",
     "thread": 4,
     "quality": 80,
     "width": 2048,

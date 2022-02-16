@@ -8,7 +8,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"github.com/davecgh/go-spew/spew"
 	"github.com/disintegration/imaging"
 	"github.com/fogleman/gg"
 	"image"
@@ -46,6 +45,14 @@ func Capture(file *model.File) (err error) {
 		return
 	}
 
+	// 删除临时文件夹
+	if !config.GetConfig().Debug {
+		err = os.RemoveAll(file.TempDir)
+		if err != nil {
+			return
+		}
+	}
+
 	return
 }
 
@@ -77,9 +84,9 @@ func createCaptures(file *model.File) (err error) {
 	lib.DebugLog(fmt.Sprintf("创建临时目录(文件xxhash):%v", file.TempDir), "dir")
 	_, err = os.Stat(file.TempDir)
 	if err != nil && os.IsNotExist(err) {
-		if os.IsNotExist(err) {
-			err = os.MkdirAll(file.TempDir, 777)
-		} else {
+		err = os.MkdirAll(file.TempDir, os.ModePerm)
+		if err != nil {
+			fmt.Println("这里", file.TempDir)
 			return
 		}
 	}
@@ -151,14 +158,6 @@ func createCaptures(file *model.File) (err error) {
 
 	lib.DebugLog(fmt.Sprintf("截图完成：%v,耗时:%v", file.TempDir, time.Since(start)), "ffmpeg")
 
-	// 删除临时文件夹
-	if !config.GetConfig().Debug {
-		err = os.RemoveAll(file.TempDir)
-		if err != nil {
-			return
-		}
-	}
-
 	return
 }
 
@@ -213,8 +212,7 @@ func drawTime(capture model.Capture) (err error) {
 	fontSize := width / 100 * 3
 
 	dc := gg.NewContextForImage(img)
-	err = dc.LoadFontFace("C:\\Windows\\Fonts\\Arial.ttf", float64(fontSize))
-	if err != nil {
+	if err = dc.LoadFontFace("C:\\Windows\\Fonts\\Arial.ttf", float64(fontSize)); err != nil {
 		return err
 	}
 	dc.SetColor(color.RGBA{R: 255, G: 255, B: 255, A: 168})
@@ -281,8 +279,24 @@ func mergeCaptures(file *model.File) (err error) {
 	}
 
 	// 名称、XxHash、大小、尺寸、时长、Meta
-	spew.Dump(file)
-	os.Exit(0)
+	fontSize := float64(bgWidth) * 0.014
+	dc.SetRGB(0, 0, 0)
+	if err = dc.LoadFontFace("C:\\Windows\\Fonts\\simhei.ttf", fontSize); err != nil {
+		return err
+	}
+	drawStrings := []string{
+		fmt.Sprintf("文件名称：%v", file.Name),
+		fmt.Sprintf("xxhash：%v", file.XxHash),
+		fmt.Sprintf("文件大小：%v", file.XxHash),
+		fmt.Sprintf("播放时长：%v", file.XxHash),
+	}
+	for i, s := range drawStrings {
+		w, _ := dc.MeasureString(s)
+		fmt.Println(w)
+		dc.DrawString(s, 0.02*float64(bgWidth), fontSize*float64(i+1)*1.5)
+	}
+
+	//spew.Dump(file)
 
 	// 缩放、保存图片
 	out := fmt.Sprintf("%v\\%v.jpg", config.GetConfig().Capture.Dir, file.XxHash)

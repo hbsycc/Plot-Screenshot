@@ -19,7 +19,7 @@ import (
 // @return err
 func getMediaInfo(file *model.File) (err error) {
 	// ffprobe 命令行详解	https://blog.csdn.net/ssehs/article/details/106625342
-	commandStr := fmt.Sprintf("ffprobe -show_format -show_streams -select_streams v -print_format json -show_entries format=filename,format_name,format_long_name,size:stream=duration,width,height,display_aspect_ratio,r_frame_rate,bit_rate,codec_name,pix_fmt,codec_long_name,avg_frame_rate -loglevel error %v", file.RePath)
+	commandStr := fmt.Sprintf("ffprobe -show_format -show_streams -select_streams v -print_format json -show_entries format=filename,format_name,duration,format_long_name,size:stream=width,height,display_aspect_ratio,r_frame_rate,bit_rate,codec_name,pix_fmt,codec_long_name,avg_frame_rate -loglevel error %v", file.RePath)
 	lib.DebugLog(fmt.Sprintf("执行命令:%v", commandStr), "ffprobe")
 
 	command := exec.Command("cmd", "/C", commandStr)
@@ -37,7 +37,7 @@ func getMediaInfo(file *model.File) (err error) {
 		return
 	}
 	var float float64
-	if float, err = strconv.ParseFloat(ffProbe.Streams[0].Duration, 64); err != nil {
+	if float, err = strconv.ParseFloat(ffProbe.Format.Duration, 64); err != nil {
 		return
 	} else {
 		file.MediaInfo.DurationSeconds = int64(math.Floor(float))
@@ -46,7 +46,6 @@ func getMediaInfo(file *model.File) (err error) {
 		file.MediaInfo.DisplayAspectRatio = ffProbe.Streams[0].DisplayAspectRatio
 		file.MediaInfo.CodecName = ffProbe.Streams[0].CodecName
 		file.MediaInfo.PixFmt = ffProbe.Streams[0].PixFmt
-		file.MediaInfo.RFrameRate = ffProbe.Streams[0].RFrameRate
 
 		if duration, err := time.ParseDuration(strconv.FormatInt(file.MediaInfo.DurationSeconds, 10) + "s"); err != nil {
 			return err
