@@ -56,7 +56,6 @@ func reName(file *model.File) (err error) {
 func recoverName(file *model.File) {
 	err := os.Rename(file.RePath, file.Path)
 	if err != nil {
-		fmt.Println(err)
 		log.Fatalf("恢复名称失败：%v -> %v", file.XxHash, file.Name)
 	}
 }
@@ -70,11 +69,11 @@ func recoverName(file *model.File) {
 // @return err
 //
 func createCaptures(file *model.File) (err error) {
-	lib.DebugLog("开始截图\n", "ffmpeg")
+	lib.DebugLog("开始截图", "ffmpeg")
 	start := time.Now()
 
 	// 创建临时目录
-	lib.DebugLog(fmt.Sprintf("创建临时目录(文件xxhash):%v\n", file.TempDir), "dir")
+	lib.DebugLog(fmt.Sprintf("创建临时目录(文件xxhash):%v", file.TempDir), "dir")
 	_, err = os.Stat(file.TempDir)
 	if err != nil && os.IsNotExist(err) {
 		if os.IsNotExist(err) {
@@ -85,11 +84,12 @@ func createCaptures(file *model.File) (err error) {
 	}
 
 	// 准备命令数组
-	commands := make([]model.Capture, config.GetConfig().Capture.Count)
-	for i := 0; i < config.GetConfig().Capture.Count; i++ {
+	captureTotal := config.GetConfig().Capture.Grid.Row * config.GetConfig().Capture.Grid.Column
+	commands := make([]model.Capture, captureTotal)
+	for i := 0; i < captureTotal; i++ {
 		output := fmt.Sprintf("%v\\%v.jpg", file.TempDir, i+1)
 
-		captureTime := file.MediaInfo.DurationSeconds / int64(config.GetConfig().Capture.Count) * int64(i)
+		captureTime := file.MediaInfo.DurationSeconds / int64(captureTotal) * int64(i)
 		item := model.Capture{
 			Command:   fmt.Sprintf("ffmpeg -ss %v -i %v -f image2 -y -frames:v 1 %v", captureTime, file.RePath, output),
 			TimeStamp: captureTime,
@@ -148,7 +148,7 @@ func createCaptures(file *model.File) (err error) {
 		}
 	}
 
-	lib.DebugLog(fmt.Sprintf("截图完成：%v,耗时:%v\n", file.TempDir, time.Since(start)), "ffmpeg")
+	lib.DebugLog(fmt.Sprintf("截图完成：%v,耗时:%v", file.TempDir, time.Since(start)), "ffmpeg")
 
 	// 删除临时文件夹
 	if !config.GetConfig().Debug {
@@ -178,7 +178,7 @@ func ffmpegCaptures(ctx context.Context, commandStr string) (err error) {
 	}
 
 	command := exec.Command("cmd", "/C", commandStr)
-	lib.DebugLog(fmt.Sprintf("执行命令:%v\n", commandStr), "ffmpeg")
+	lib.DebugLog(fmt.Sprintf("执行命令:%v", commandStr), "ffmpeg")
 	command.Stdout = &bytes.Buffer{}
 	command.Stderr = &bytes.Buffer{}
 
@@ -200,7 +200,7 @@ func ffmpegCaptures(ctx context.Context, commandStr string) (err error) {
 //  @return err
 //
 func drawTime(capture model.Capture) (err error) {
-	lib.DebugLog(fmt.Sprintf("截图文件:%v,截取时间:%v\n", capture.Image, capture.TimeDuration), "TimeDuration")
+	lib.DebugLog(fmt.Sprintf("截图文件:%v,截取时间:%v", capture.Image, capture.TimeDuration), "TimeDuration")
 
 	img, err := gg.LoadImage(capture.Image)
 	if err != nil {
@@ -227,7 +227,7 @@ func drawTime(capture model.Capture) (err error) {
 // mergeCaptures
 // @Description: 合并截图
 func mergeCaptures(file *model.File) (err error) {
-	lib.DebugLog("开始合成\n", "merge")
+	lib.DebugLog("开始合成", "merge")
 	startTime := time.Now()
 
 	// 读取临时目录下截图文件、按文件名排序
@@ -268,7 +268,6 @@ func mergeCaptures(file *model.File) (err error) {
 		path := fmt.Sprintf("%v//%v", file.TempDir, cn)
 		c, err := gg.LoadImage(path)
 		if err != nil {
-			fmt.Println(err)
 			return err
 		}
 
@@ -283,7 +282,7 @@ func mergeCaptures(file *model.File) (err error) {
 	zoom := imaging.Resize(dc.Image(), 4096, 0, imaging.Lanczos)
 	err = gg.SaveJPG(out, zoom, config.GetConfig().Capture.Quality)
 
-	lib.DebugLog(fmt.Sprintf("合成完成：%v,耗时:%v\n", out, time.Since(startTime)), "merge")
+	lib.DebugLog(fmt.Sprintf("合成完成：%v,耗时:%v", out, time.Since(startTime)), "merge")
 
 	return
 }

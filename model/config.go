@@ -8,7 +8,6 @@ type Config struct {
 	} `json:"media"`
 	Capture struct {
 		Dir     string `json:"dir"`    // 截图保存路径
-		Count   int    `json:"count"`  // 生成截图数量
 		Thread  int    `json:"thread"` // 生成截图时的线程数量
 		Quality int    `json:"quality"`
 		Grid    struct {

@@ -3,19 +3,18 @@ package lib
 import (
 	"a.resources.cc/config"
 	"fmt"
-	"strings"
+	"log"
 )
 
-func DebugLog(msg string, flags ...string) {
+func DebugLog(msg string, prefix ...string) {
 	if !config.GetConfig().Debug {
 		return
 	}
 
-	flagStr := ""
-	for _, flag := range flags {
-		strings.Join(flags, "")
-		flagStr += fmt.Sprintf("[%v]", flag)
+	for _, flag := range prefix {
+		log.SetPrefix(fmt.Sprintf("[%v] ", flag))
 	}
 
-	fmt.Printf("%v %v", flagStr, msg)
+	log.SetFlags(log.Ltime)
+	log.Println(msg)
 }

@@ -1,4 +1,4 @@
-package main
+package dirFile
 
 import (
 	"a.resources.cc/config"
@@ -32,9 +32,7 @@ func MediaDirWalk() (err error) {
 }
 
 func walk(dir string) (err error) {
-	fmt.Println(dir)
 	err = filepath.Walk(dir, func(infoPath string, info os.FileInfo, err error) error {
-		fmt.Println(info)
 		if info.IsDir() {
 			dirName := info.Name()
 			childDir := infoPath + "\\" + dirName

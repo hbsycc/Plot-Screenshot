@@ -21,9 +21,7 @@ import (
 //
 func getMediaInfo(file *model.File) (err error) {
 	commandStr := fmt.Sprintf("ffprobe -print_format json  -show_streams %v", file.RePath)
-	fmt.Println(file.RePath)
-	fmt.Println(commandStr)
-	lib.DebugLog(fmt.Sprintf("执行命令:%v\n", commandStr), "ffprobe")
+	lib.DebugLog(fmt.Sprintf("执行命令:%v", commandStr), "ffprobe")
 
 	command := exec.Command("cmd", "/C", commandStr)
 	command.Stdout = &bytes.Buffer{}

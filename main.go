@@ -3,6 +3,7 @@ package main
 import (
 	"a.resources.cc/capture"
 	"a.resources.cc/config"
+	"a.resources.cc/dirFile"
 	"log"
 )
 
@@ -10,21 +11,16 @@ func init() {
 	if err := config.SetConfig(); err != nil {
 		panic(err)
 	}
-
-	if err := MediaDirWalk(); err != nil {
-		panic(err)
-	}
-
-	//fmt.Printf("文件夹总数：%v,文件总数：%v\n", len(Dirs), len(Files))
 }
 
 func main() {
-	//if err := capture.Capture(&Files[0]); err != nil {
-	//	fmt.Println(err)
-	//}
-	//return
+	//c := make(chan model.File)
 
-	for _, file := range Files {
+	if err := dirFile.MediaDirWalk(); err != nil {
+		panic(err)
+	}
+
+	for _, file := range dirFile.Files {
 		if err := capture.Capture(&file); err != nil {
 			log.Fatalln(err.Error())
 		}
