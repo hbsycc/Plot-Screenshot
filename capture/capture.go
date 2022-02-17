@@ -2,6 +2,7 @@ package capture
 
 import (
 	"a.resources.cc/config"
+	"a.resources.cc/font"
 	"a.resources.cc/lib"
 	"a.resources.cc/model"
 	"bytes"
@@ -14,6 +15,7 @@ import (
 	"image/color"
 	"image/draw"
 	"log"
+	"math"
 	"os"
 	"os/exec"
 	"sort"
@@ -209,17 +211,17 @@ func drawTime(capture model.Capture) (err error) {
 
 	width := img.Bounds().Dx()
 	height := img.Bounds().Dy()
-	fontSize := width / 100 * 3
-
 	dc := gg.NewContextForImage(img)
-	if err = dc.LoadFontFace("C:\\Windows\\Fonts\\Arial.ttf", float64(fontSize)); err != nil {
+	if face, err := font.GetFontFace(float64(48)); err != nil {
 		return err
+	} else {
+		dc.SetFontFace(face)
+		dc.SetColor(color.RGBA{R: 255, G: 255, B: 255, A: 168})
+		stringWidth, _ := dc.MeasureString(capture.TimeDuration)
+		dc.DrawString(capture.TimeDuration, float64(width-int(stringWidth)), float64(height-5))
 	}
-	dc.SetColor(color.RGBA{R: 255, G: 255, B: 255, A: 168})
-	stringWidth, _ := dc.MeasureString(capture.TimeDuration)
-	dc.DrawString(capture.TimeDuration, float64(width-int(stringWidth)-15), float64(height-10))
-	err = dc.SavePNG(capture.Image)
 
+	err = dc.SavePNG(capture.Image)
 	return
 }
 
@@ -250,56 +252,75 @@ func mergeCaptures(file *model.File) (err error) {
 		return iName < jName
 	})
 
-	// 合成大图
+	// 截图区域
 	var (
-		column          = config.GetConfig().Capture.Grid.Column
-		columnGap       = config.GetConfig().Capture.Grid.ColumnGap
-		row             = config.GetConfig().Capture.Grid.Row
-		rowGap          = config.GetConfig().Capture.Grid.RowGap
-		mediaInfoHeight = int(float32(file.MediaInfo.Height) * 1.6) // 信息区域高度
-		bgWidth         = file.MediaInfo.Width*column + (column-1)*columnGap
-		bgHeight        = file.MediaInfo.Height*row + (row-1)*rowGap + mediaInfoHeight
+		column    = config.GetConfig().Capture.Grid.Column
+		columnGap = config.GetConfig().Capture.Grid.ColumnGap
+		row       = config.GetConfig().Capture.Grid.Row
+		rowGap    = config.GetConfig().Capture.Grid.RowGap
+		bgWidth   = file.MediaInfo.Video.Width*column + (column-1)*columnGap
+		bgHeight  = file.MediaInfo.Video.Height*row + (row-1)*rowGap
 	)
 	rect := image.Rect(0, 0, bgWidth, bgHeight)
 	bg := image.NewRGBA(rect)
 	draw.Draw(bg, rect.Bounds(), &image.Uniform{C: color.White}, image.Pt(0, 0), draw.Src)
 	dc := gg.NewContextForRGBA(bg)
 	for i, cn := range capturesName {
+		var c image.Image
 		path := fmt.Sprintf("%v//%v", file.TempDir, cn)
-		c, err := gg.LoadImage(path)
-		if err != nil {
-			return err
+		if c, err = gg.LoadImage(path); err != nil {
+			return
 		}
 
 		xIndex := i % column
-		x := (xIndex * columnGap) + (xIndex * file.MediaInfo.Width)
+		x := (xIndex * columnGap) + (xIndex * file.MediaInfo.Video.Width)
 		yIndex := i / column
-		y := (yIndex * rowGap) + (yIndex * file.MediaInfo.Height)
-		dc.DrawImage(c, x, y+mediaInfoHeight)
+		y := (yIndex * rowGap) + (yIndex * file.MediaInfo.Video.Height)
+		dc.DrawImage(c, x, y)
 	}
+	capturesImage := dc.Image()
 
-	// 名称、XxHash、大小、尺寸、时长、Meta
-	fontSize := float64(bgWidth) * 0.014
-	dc.SetRGB(0, 0, 0)
-	if err = dc.LoadFontFace("C:\\Windows\\Fonts\\simhei.ttf", fontSize); err != nil {
-		return err
+	// 信息区域
+	metas := []string{
+		fmt.Sprint(file.MediaInfo.Video.Width, "*", file.MediaInfo.Video.Height),
+		file.MediaInfo.Video.DisplayAspectRatio,
+		file.MediaInfo.Video.CodecName,
+		file.MediaInfo.Video.PixFmt,
+	}
+	size, err := strconv.ParseInt(file.MediaInfo.Format.Size, 10, 64)
+	if err != nil {
+		return
 	}
 	drawStrings := []string{
 		fmt.Sprintf("文件名称：%v", file.Name),
-		fmt.Sprintf("xxhash：%v", file.XxHash),
-		fmt.Sprintf("文件大小：%v", file.XxHash),
-		fmt.Sprintf("播放时长：%v", file.XxHash),
+		fmt.Sprintf("文件大小：%v", lib.FormatFileSize(size)),
+		fmt.Sprintf("播放时长：%v", file.MediaInfo.DurationFormat),
+		fmt.Sprintf("编码信息：%v", strings.Join(metas, " / ")),
+		fmt.Sprintf("文件Hash：%v", file.XxHash),
 	}
-	for i, s := range drawStrings {
-		w, _ := dc.MeasureString(s)
-		fmt.Println(w)
-		dc.DrawString(s, 0.02*float64(bgWidth), fontSize*float64(i+1)*1.5)
+	var fontSize float64 = 72
+	lineHeight := math.Ceil(fontSize * 1.5)
+	metaHeight := int(lineHeight)*len(drawStrings) + int(lineHeight*0.5)
+	rect = image.Rect(0, 0, bgWidth, bgHeight+metaHeight)
+	bg = image.NewRGBA(rect)
+	dc = gg.NewContextForRGBA(bg)
+	draw.Draw(bg, rect.Bounds(), &image.Uniform{C: color.White}, image.Pt(0, 0), draw.Src)
+	dc.DrawImage(capturesImage, 0, metaHeight)
+	if fontFace, err := font.GetFontFace(fontSize); err != nil {
+		return err
+	} else {
+		dc.SetFontFace(fontFace)
+		dc.SetRGB(0, 0, 0)
+		textIndent, _ := dc.MeasureString("A")
+		for i, s := range drawStrings {
+			dc.DrawString(s, textIndent, lineHeight*float64(i+1))
+		}
 	}
-
-	//spew.Dump(file)
 
 	// 缩放、保存图片
-	out := fmt.Sprintf("%v\\%v.jpg", config.GetConfig().Capture.Dir, file.XxHash)
+	o := strings.Split(file.TempDir, "\\")
+	out := strings.Join(o[0:len(o)-1], "\\")
+	out = fmt.Sprintf("%v\\%v.jpg", out, file.XxHash)
 	outImage := dc.Image()
 	resizeWidth := config.GetConfig().Capture.ResizeWidth
 	if resizeWidth > 0 {

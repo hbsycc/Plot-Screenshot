@@ -28,12 +28,11 @@ func SetConfig() (err error) {
 		return
 	}
 
-	err = json.Unmarshal(c, &config)
+	if err = json.Unmarshal(c, &config); err != nil {
+		return
+	}
 	for i, s := range config.Media.Ext {
 		config.Media.Ext[i] = strings.ToLower(s)
-	}
-	if err != nil {
-		return
 	}
 
 	return

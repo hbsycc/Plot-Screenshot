@@ -7,7 +7,7 @@ type Config struct {
 		Ext []string `json:"ext"` // 匹配媒体文件后缀
 	} `json:"media"`
 	Capture struct {
-		Dir         string `json:"dir"`     // 截图保存路径
+		Dir         string `json:"dir"`     // 截图保存路径，空值则自动在媒体文件下创建 screenshot 目录
 		Thread      int    `json:"thread"`  // 生成截图时的线程数量
 		Quality     int    `json:"quality"` // 截图质量
 		ResizeWidth int    `json:"width"`   // 截图缩放最大宽度,默认0不缩放

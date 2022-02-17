@@ -9,13 +9,9 @@ type File struct {
 	Path      string
 	RePath    string
 	MediaInfo struct {
-		DurationSeconds    int64
-		DurationFormat     string
-		Width              int
-		Height             int
-		DisplayAspectRatio string
-		CodecName          string
-		PixFmt             string
-		RFrameRate         string
+		Video           FFProbeStream
+		Format          FFProbeFormat
+		DurationSeconds int64
+		DurationFormat  string
 	}
 }

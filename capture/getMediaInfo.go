@@ -40,20 +40,15 @@ func getMediaInfo(file *model.File) (err error) {
 	if float, err = strconv.ParseFloat(ffProbe.Format.Duration, 64); err != nil {
 		return
 	} else {
+		file.MediaInfo.Video = *ffProbe.Streams[0]
+		file.MediaInfo.Format = *ffProbe.Format
 		file.MediaInfo.DurationSeconds = int64(math.Floor(float))
-		file.MediaInfo.Width = ffProbe.Streams[0].Width
-		file.MediaInfo.Height = ffProbe.Streams[0].Height
-		file.MediaInfo.DisplayAspectRatio = ffProbe.Streams[0].DisplayAspectRatio
-		file.MediaInfo.CodecName = ffProbe.Streams[0].CodecName
-		file.MediaInfo.PixFmt = ffProbe.Streams[0].PixFmt
-
 		if duration, err := time.ParseDuration(strconv.FormatInt(file.MediaInfo.DurationSeconds, 10) + "s"); err != nil {
 			return err
 		} else {
 			df := fmt.Sprintf("%02d:%02d:%02d", int(duration.Hours()), int(duration.Minutes())%60, int(duration.Seconds())%60)
 			file.MediaInfo.DurationFormat = df
 		}
-
 	}
 
 	return
