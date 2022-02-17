@@ -18,19 +18,32 @@ import (
 	"math"
 	"os"
 	"os/exec"
+	"os/signal"
 	"sort"
 	"strconv"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 )
 
 func Capture(file *model.File) (err error) {
-	if err = reName(file); err != nil {
-		return
-	}
-
-	defer recoverName(file)
+	// 创建监听系统信号 channel
+	c := make(chan os.Signal)
+	// 监听信号 ctrl+c kill
+	signal.Notify(c, syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM)
+	// 协程监听退出
+	go func() {
+		for s := range c {
+			switch s {
+			case syscall.SIGHUP, syscall.SIGINT, syscall.SIGQUIT, syscall.SIGTERM:
+				RecoverName(*file)
+				os.Exit(0)
+			default:
+				fmt.Println("other signal", s)
+			}
+		}
+	}()
 
 	err = getMediaInfo(file)
 	if err != nil {
@@ -58,16 +71,20 @@ func Capture(file *model.File) (err error) {
 	return
 }
 
-func reName(file *model.File) (err error) {
+func TempName(file model.File) (err error) {
 	err = os.Rename(file.Path, file.RePath)
 	return
 }
 
-func recoverName(file *model.File) {
+func RecoverName(file model.File) {
+	fmt.Println("恢复名称")
 	err := os.Rename(file.RePath, file.Path)
 	if err != nil {
-		log.Fatalf("恢复名称失败：%v -> %v", file.XxHash, file.Name)
+		log.Fatalf("恢复名称失败：%v -> %v", file.RePath, file.Path)
+		return
 	}
+
+	return
 }
 
 //
@@ -320,7 +337,8 @@ func mergeCaptures(file *model.File) (err error) {
 	// 缩放、保存图片
 	o := strings.Split(file.TempDir, "\\")
 	out := strings.Join(o[0:len(o)-1], "\\")
-	out = fmt.Sprintf("%v\\%v.jpg", out, file.XxHash)
+	outFile := strings.ReplaceAll(file.Name, file.Ext, ".jpg")
+	out = fmt.Sprintf("%v\\%v", out, outFile)
 	outImage := dc.Image()
 	resizeWidth := config.GetConfig().Capture.ResizeWidth
 	if resizeWidth > 0 {

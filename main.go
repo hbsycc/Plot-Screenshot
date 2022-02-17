@@ -37,18 +37,19 @@ func main() {
 		close(c)
 	}()
 
+	var count uint64 = 1
+	log.SetPrefix(fmt.Sprintf("[%v] ", count))
 	for file := range c {
+		log.Printf("处理：%v", file.Path)
+
+		if err := capture.TempName(file); err != nil {
+			return
+		}
 		if err := capture.Capture(&file); err != nil {
 			log.Fatalln(err.Error())
 		}
-		lib.DebugLog("主线程处理完了", "main")
+		capture.RecoverName(file)
 	}
-
-	//for _, file := range dirFile.Files {
-	//	if err := capture.Capture(&file); err != nil {
-	//		log.Fatalln(err.Error())
-	//	}
-	//}
 
 	//err := database.InsertFiles()
 	//if err != nil {
