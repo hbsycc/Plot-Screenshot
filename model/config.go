@@ -12,10 +12,11 @@ type Config struct {
 		Quality     int `json:"quality"` // 截图质量
 		ResizeWidth int `json:"width"`   // 截图缩放最大宽度,默认0不缩放
 		Grid        struct {
-			Column    int `json:"column"`
-			Row       int `json:"row"`
-			ColumnGap int `json:"columnGap"`
-			RowGap    int `json:"rowGap"`
+			Column      int     `json:"column"`
+			Row         int     `json:"row"`
+			ColumnGap   int     `json:"columnGap"`
+			RowGap      int     `json:"rowGap"`
+			BorderWidth float64 `json:"borderWidth"` // 截图边框宽度，默认0不显示
 		} `json:"grid"`
 	} `json:"capture"`
 }

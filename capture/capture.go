@@ -218,7 +218,7 @@ func ffmpegCaptures(ctx context.Context, mediaDir string, commandStr string) (er
 }
 
 // drawTime
-//  @Description: 截图写入截取时间
+//  @Description: 截图写入截取时间、描边
 // @param capture
 // @return err
 func drawTime(capture model.Capture) (err error) {
@@ -229,8 +229,8 @@ func drawTime(capture model.Capture) (err error) {
 		return
 	}
 
-	width := img.Bounds().Dx()
-	height := img.Bounds().Dy()
+	width := float64(img.Bounds().Dx())
+	height := float64(img.Bounds().Dy())
 	fontSize := float64(width) * 0.04
 	dc := gg.NewContextForImage(img)
 	if face, err := font.GetFontFace(fontSize); err != nil {
@@ -239,10 +239,16 @@ func drawTime(capture model.Capture) (err error) {
 		dc.SetFontFace(face)
 		dc.SetColor(color.RGBA{R: 255, G: 255, B: 255, A: 168})
 		stringWidth, _ := dc.MeasureString(capture.TimeDuration)
-		dc.DrawString(capture.TimeDuration, float64(width-int(stringWidth)), float64(height-5))
+		dc.DrawString(capture.TimeDuration, width-stringWidth, height-5)
 	}
 
-	err = dc.SavePNG(capture.Image)
+	if config.GetConfig().Capture.Grid.BorderWidth > 0 {
+		dc.DrawRectangle(0, 0, width, height)
+		dc.SetColor(color.Black)
+		dc.SetLineWidth(config.GetConfig().Capture.Grid.BorderWidth)
+		dc.Stroke()
+	}
+	err = gg.SaveJPG(capture.Image, dc.Image(), 100)
 	return
 }
 
@@ -319,7 +325,7 @@ func mergeCaptures(file *model.File) (err error) {
 		fmt.Sprintf("编码信息 ：%v", strings.Join(metas, " / ")),
 		fmt.Sprintf("文件Hash：%v", file.XxHash),
 	}
-	var fontSize = float64(bgWidth) * 0.012
+	var fontSize = math.Ceil(float64(bgWidth) * 0.013)
 	lineHeight := math.Ceil(fontSize * 1.5)
 	metaHeight := int(lineHeight)*len(drawStrings) + int(lineHeight*0.5)
 	rect = image.Rect(0, 0, bgWidth, bgHeight+metaHeight)

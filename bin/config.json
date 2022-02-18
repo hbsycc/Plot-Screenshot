@@ -1,5 +1,5 @@
 {
-  "debug": false,
+  "debug": true,
   "outDirName": "screenshot",
   "media": {
     "dir": [
@@ -14,13 +14,14 @@
   },
   "capture": {
     "thread": 4,
-    "quality": 90,
     "width": 2048,
+    "quality": 90,
     "grid": {
       "column": 4,
       "row": 4,
       "columnGap": 20,
-      "rowGap": 20
+      "rowGap": 20,
+      "borderWidth": 5
     }
   }
 }
