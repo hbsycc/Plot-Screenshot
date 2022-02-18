@@ -5,6 +5,7 @@ import (
 	"a.resources.cc/lib"
 	"a.resources.cc/model"
 	"fmt"
+	"path/filepath"
 	"time"
 )
 
@@ -19,12 +20,8 @@ func HashUnique(file *model.File) (err error) {
 		return err
 	} else {
 		file.XxHash = hash
-		file.RePath = fmt.Sprintf("%v\\%v", file.Dir, hash+file.Ext)
-		if len(config.GetConfig().Capture.Dir) == 0 {
-			file.TempDir = fmt.Sprintf("%v\\screenshot\\%v", file.Dir, hash)
-		} else {
-			file.TempDir = fmt.Sprintf("%v\\%v", config.GetConfig().Capture.Dir, hash)
-		}
+		file.RePath = filepath.Join(file.Dir, hash+file.Ext)
+		file.TempDir = filepath.Join(file.Dir, config.GetConfig().OutDirName, hash)
 	}
 	lib.DebugLog(fmt.Sprintf("对文件xxhash,耗时：%v", time.Since(startTime)), "hash")
 

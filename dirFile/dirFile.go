@@ -33,15 +33,14 @@ func walk(dir string) (err error) {
 	err = filepath.Walk(dir, func(infoPath string, info os.FileInfo, err error) error {
 		if info.IsDir() {
 			dirName := info.Name()
-			childDir := infoPath + "\\" + dirName
+			childDir := filepath.Join(infoPath, dirName)
 			Dirs = append(Dirs, childDir)
 		} else {
-			name := info.Name()
-			infoPaths := strings.Split(infoPath, "\\")
+			fileName := info.Name()
 			f := model.File{
-				Name: name,
-				Ext:  path.Ext(name),
-				Dir:  strings.Join(infoPaths[0:len(infoPaths)-1], "\\"),
+				Name: fileName,
+				Ext:  path.Ext(fileName),
+				Dir:  filepath.Dir(infoPath),
 				Path: infoPath,
 			}
 

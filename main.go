@@ -43,7 +43,7 @@ func main() {
 		log.Printf("处理：%v", file.Path)
 
 		if err := capture.TempName(file); err != nil {
-			return
+			log.Fatalln(err.Error())
 		}
 		if err := capture.Capture(&file); err != nil {
 			capture.RecoverName(file)
@@ -51,6 +51,8 @@ func main() {
 		}
 		capture.RecoverName(file)
 	}
+
+	fmt.Printf("已完成！文件夹总数：%v,文件总数：%v", len(dirFile.Dirs), len(dirFile.Files))
 
 	//err := database.InsertFiles()
 	//if err != nil {

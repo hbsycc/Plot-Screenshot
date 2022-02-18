@@ -114,7 +114,7 @@ func createCaptures(file *model.File) (err error) {
 	captureTotal := config.GetConfig().Capture.Grid.Row * config.GetConfig().Capture.Grid.Column
 	commands := make([]model.Capture, captureTotal)
 	for i := 0; i < captureTotal; i++ {
-		var output string
+		output := fmt.Sprintf("%v%v.jpg", file.TempDir, i+1)
 		if output, err = filepath.Rel(file.Dir, file.TempDir); err != nil {
 			return err
 		} else {
@@ -125,7 +125,7 @@ func createCaptures(file *model.File) (err error) {
 		item := model.Capture{
 			Command:   fmt.Sprintf("ffmpeg -ss %v -i %v -f image2 -y -frames:v 1 %v", captureTime, file.XxHash+file.Ext, output),
 			TimeStamp: captureTime,
-			Image:     output,
+			Image:     filepath.Join(file.Dir, output),
 		}
 
 		stamp := strconv.FormatInt(captureTime, 10)
@@ -158,7 +158,7 @@ func createCaptures(file *model.File) (err error) {
 			}
 
 			// 当前截图写入时间
-			err = drawTime(file.Dir, command)
+			err = drawTime(command)
 			if err != nil {
 				cancel()
 				err = e
@@ -189,10 +189,10 @@ func createCaptures(file *model.File) (err error) {
 // ffmpegCaptures
 // @Description: ffmpeg生成截图
 // @param ctx
-// @param dir
+// @param mediaDir
 // @param commandStr
 // @return err
-func ffmpegCaptures(ctx context.Context, dir string, commandStr string) (err error) {
+func ffmpegCaptures(ctx context.Context, mediaDir string, commandStr string) (err error) {
 	select {
 	case <-ctx.Done():
 		fmt.Println("主程通知取消")
@@ -203,7 +203,7 @@ func ffmpegCaptures(ctx context.Context, dir string, commandStr string) (err err
 
 	command := exec.Command("cmd", "/C", commandStr)
 	lib.DebugLog(fmt.Sprintf("执行命令:%v", commandStr), "ffmpeg")
-	command.Dir = dir
+	command.Dir = mediaDir
 	command.Stdout = &bytes.Buffer{}
 	command.Stderr = &bytes.Buffer{}
 
@@ -217,26 +217,23 @@ func ffmpegCaptures(ctx context.Context, dir string, commandStr string) (err err
 	return
 }
 
-//
-//  drawTime
+// drawTime
 //  @Description: 截图写入截取时间
-//  @param imageSource
-//  @param drawTime
-//  @return err
-//
-func drawTime(dir string, capture model.Capture) (err error) {
-	imageFile := filepath.Join(dir, capture.Image)
-	lib.DebugLog(fmt.Sprintf("截图文件:%v,写入截取时间:%v", imageFile, capture.TimeDuration), "TimeDuration")
+// @param capture
+// @return err
+func drawTime(capture model.Capture) (err error) {
+	lib.DebugLog(fmt.Sprintf("截图文件:%v,写入截取时间:%v", capture.Image, capture.TimeDuration), "TimeDuration")
 
-	img, err := gg.LoadImage(imageFile)
+	img, err := gg.LoadImage(capture.Image)
 	if err != nil {
 		return
 	}
 
 	width := img.Bounds().Dx()
 	height := img.Bounds().Dy()
+	fontSize := float64(width) * 0.04
 	dc := gg.NewContextForImage(img)
-	if face, err := font.GetFontFace(float64(48)); err != nil {
+	if face, err := font.GetFontFace(fontSize); err != nil {
 		return err
 	} else {
 		dc.SetFontFace(face)
@@ -245,7 +242,7 @@ func drawTime(dir string, capture model.Capture) (err error) {
 		dc.DrawString(capture.TimeDuration, float64(width-int(stringWidth)), float64(height-5))
 	}
 
-	err = dc.SavePNG(imageFile)
+	err = dc.SavePNG(capture.Image)
 	return
 }
 
@@ -311,18 +308,18 @@ func mergeCaptures(file *model.File) (err error) {
 		file.MediaInfo.Video.CodecName,
 		file.MediaInfo.Video.PixFmt,
 	}
-	size, err := strconv.ParseInt(file.MediaInfo.Format.Size, 10, 64)
+	fileSize, err := strconv.ParseInt(file.MediaInfo.Format.Size, 10, 64)
 	if err != nil {
 		return
 	}
 	drawStrings := []string{
-		fmt.Sprintf("文件名称：%v", file.Name),
-		fmt.Sprintf("文件大小：%v", lib.FormatFileSize(size)),
-		fmt.Sprintf("播放时长：%v", file.MediaInfo.DurationFormat),
-		fmt.Sprintf("编码信息：%v", strings.Join(metas, " / ")),
+		fmt.Sprintf("文件名称 ：%v", file.Name),
+		fmt.Sprintf("文件大小 ：%v", lib.FormatFileSize(fileSize)),
+		fmt.Sprintf("播放时长 ：%v", file.MediaInfo.DurationFormat),
+		fmt.Sprintf("编码信息 ：%v", strings.Join(metas, " / ")),
 		fmt.Sprintf("文件Hash：%v", file.XxHash),
 	}
-	var fontSize float64 = 72
+	var fontSize = float64(bgWidth) * 0.012
 	lineHeight := math.Ceil(fontSize * 1.5)
 	metaHeight := int(lineHeight)*len(drawStrings) + int(lineHeight*0.5)
 	rect = image.Rect(0, 0, bgWidth, bgHeight+metaHeight)
