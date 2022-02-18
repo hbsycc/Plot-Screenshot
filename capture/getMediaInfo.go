@@ -42,7 +42,14 @@ func getMediaInfo(file *model.File) (err error) {
 		return
 	} else {
 		file.MediaInfo.Video = *ffProbe.Streams[0]
+
 		file.MediaInfo.Format = *ffProbe.Format
+		if fileSize, err := strconv.ParseInt(file.MediaInfo.Format.Size, 10, 64); err != nil {
+			return err
+		} else {
+			file.MediaInfo.Format.SizeFormat = lib.FormatFileSize(fileSize)
+		}
+
 		file.MediaInfo.DurationSeconds = int64(math.Floor(float))
 		if duration, err := time.ParseDuration(strconv.FormatInt(file.MediaInfo.DurationSeconds, 10) + "s"); err != nil {
 			return err

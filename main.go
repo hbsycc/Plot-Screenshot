@@ -8,6 +8,7 @@ import (
 	"a.resources.cc/model"
 	"fmt"
 	"log"
+	"time"
 )
 
 func init() {
@@ -42,6 +43,7 @@ func main() {
 	for file := range c {
 		log.Printf("处理：%v", file.Path)
 
+		timeStart := time.Now()
 		if err := capture.TempName(file); err != nil {
 			log.Fatalln(err.Error())
 		}
@@ -50,9 +52,11 @@ func main() {
 			log.Fatalln(err.Error())
 		}
 		capture.RecoverName(file)
+		log.Printf("完成! 耗时:%v 大小:%v", time.Since(timeStart), file.MediaInfo.Format.SizeFormat)
 	}
 
-	fmt.Printf("已完成！文件夹总数：%v,文件总数：%v", len(dirFile.Dirs), len(dirFile.Files))
+	log.SetPrefix("\n[ok] ")
+	log.Printf("任务全部完成！文件夹总数：%v,文件总数：%v", len(dirFile.Dirs), len(dirFile.Files))
 
 	//err := database.InsertFiles()
 	//if err != nil {

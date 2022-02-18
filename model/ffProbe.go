@@ -15,6 +15,7 @@ type FFProbeFormat struct {
 	FormatLongName string `json:"format_long_name"`
 	Duration       string `json:"duration"`
 	Size           string `json:"size"`
+	SizeFormat     string `json:"sizeFormat"`
 }
 
 type FFProbe struct {

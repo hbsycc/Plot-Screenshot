@@ -314,13 +314,9 @@ func mergeCaptures(file *model.File) (err error) {
 		file.MediaInfo.Video.CodecName,
 		file.MediaInfo.Video.PixFmt,
 	}
-	fileSize, err := strconv.ParseInt(file.MediaInfo.Format.Size, 10, 64)
-	if err != nil {
-		return
-	}
 	drawStrings := []string{
 		fmt.Sprintf("文件名称 ：%v", file.Name),
-		fmt.Sprintf("文件大小 ：%v", lib.FormatFileSize(fileSize)),
+		fmt.Sprintf("文件大小 ：%v", file.MediaInfo.Format.SizeFormat),
 		fmt.Sprintf("播放时长 ：%v", file.MediaInfo.DurationFormat),
 		fmt.Sprintf("编码信息 ：%v", strings.Join(metas, " / ")),
 		fmt.Sprintf("文件Hash：%v", file.XxHash),
