@@ -1,13 +1,8 @@
 {
-  "debug": false,
+  "debug": true,
   "media": {
     "dir": [
-      "D:\\Workspaces\\webDav\\16T\\MOVIE\\haobo",
-      "D:\\Workspaces\\webDav\\16T\\MOVIE\\GIGA",
-      "D:\\Workspaces\\webDav\\16T\\MOVIE\\Dark Rooms",
-      "D:\\Workspaces\\webDav\\16T\\MOVIE\\Angel The Dreamgirl",
-      "D:\\Workspaces\\webDav\\16T\\MOVIE\\Inshadow",
-      "D:\\Workspaces\\webDav\\16T\\MOVIE\\NEW CHRIS' CORNER"
+      "D:\\workSpace\\Go\\a.resources.cc\\bin\\media"
     ],
     "ext": [
       ".MP4",

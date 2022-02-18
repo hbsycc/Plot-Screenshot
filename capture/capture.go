@@ -19,6 +19,7 @@ import (
 	"os"
 	"os/exec"
 	"os/signal"
+	"path/filepath"
 	"sort"
 	"strconv"
 	"strings"
@@ -77,7 +78,6 @@ func TempName(file model.File) (err error) {
 }
 
 func RecoverName(file model.File) {
-	fmt.Println("恢复名称")
 	err := os.Rename(file.RePath, file.Path)
 	if err != nil {
 		log.Fatalf("恢复名称失败：%v -> %v", file.RePath, file.Path)
@@ -114,11 +114,16 @@ func createCaptures(file *model.File) (err error) {
 	captureTotal := config.GetConfig().Capture.Grid.Row * config.GetConfig().Capture.Grid.Column
 	commands := make([]model.Capture, captureTotal)
 	for i := 0; i < captureTotal; i++ {
-		output := fmt.Sprintf("%v\\%v.jpg", file.TempDir, i+1)
+		var output string
+		if output, err = filepath.Rel(file.Dir, file.TempDir); err != nil {
+			return err
+		} else {
+			output = fmt.Sprintf("%v%v%v.jpg", output, string(filepath.Separator), i+1)
+		}
 
 		captureTime := file.MediaInfo.DurationSeconds / int64(captureTotal) * int64(i)
 		item := model.Capture{
-			Command:   fmt.Sprintf("ffmpeg -ss %v -i %v -f image2 -y -frames:v 1 %v", captureTime, file.RePath, output),
+			Command:   fmt.Sprintf("ffmpeg -ss %v -i %v -f image2 -y -frames:v 1 %v", captureTime, file.XxHash+file.Ext, output),
 			TimeStamp: captureTime,
 			Image:     output,
 		}
@@ -145,7 +150,7 @@ func createCaptures(file *model.File) (err error) {
 		processCount += 1
 		wg.Add(1)
 		go func(file *model.File) {
-			e := ffmpegCaptures(ctx, command.Command)
+			e := ffmpegCaptures(ctx, file.Dir, command.Command)
 			// 发生错误，通知所有协程取消
 			if e != nil {
 				cancel()
@@ -153,7 +158,7 @@ func createCaptures(file *model.File) (err error) {
 			}
 
 			// 当前截图写入时间
-			err = drawTime(command)
+			err = drawTime(file.Dir, command)
 			if err != nil {
 				cancel()
 				err = e
@@ -161,6 +166,7 @@ func createCaptures(file *model.File) (err error) {
 
 			wg.Done()
 		}(file)
+
 		// 等待当前线程组的所有任务结束，发生错误的话直接返回
 		if processCount == config.GetConfig().Capture.Thread {
 			wg.Wait()
@@ -180,17 +186,16 @@ func createCaptures(file *model.File) (err error) {
 	return
 }
 
-//
-//  ffmpegCaptures
-//  @Description: ffmpeg生成截图
-//  @param ctx
-//  @param commandStr
-//  @return err
-//
-func ffmpegCaptures(ctx context.Context, commandStr string) (err error) {
+// ffmpegCaptures
+// @Description: ffmpeg生成截图
+// @param ctx
+// @param dir
+// @param commandStr
+// @return err
+func ffmpegCaptures(ctx context.Context, dir string, commandStr string) (err error) {
 	select {
 	case <-ctx.Done():
-		//fmt.Println("主程通知取消")
+		fmt.Println("主程通知取消")
 		return
 	default:
 		//fmt.Println("协程继续运行")
@@ -198,6 +203,7 @@ func ffmpegCaptures(ctx context.Context, commandStr string) (err error) {
 
 	command := exec.Command("cmd", "/C", commandStr)
 	lib.DebugLog(fmt.Sprintf("执行命令:%v", commandStr), "ffmpeg")
+	command.Dir = dir
 	command.Stdout = &bytes.Buffer{}
 	command.Stderr = &bytes.Buffer{}
 
@@ -218,10 +224,11 @@ func ffmpegCaptures(ctx context.Context, commandStr string) (err error) {
 //  @param drawTime
 //  @return err
 //
-func drawTime(capture model.Capture) (err error) {
-	lib.DebugLog(fmt.Sprintf("截图文件:%v,截取时间:%v", capture.Image, capture.TimeDuration), "TimeDuration")
+func drawTime(dir string, capture model.Capture) (err error) {
+	imageFile := filepath.Join(dir, capture.Image)
+	lib.DebugLog(fmt.Sprintf("截图文件:%v,写入截取时间:%v", imageFile, capture.TimeDuration), "TimeDuration")
 
-	img, err := gg.LoadImage(capture.Image)
+	img, err := gg.LoadImage(imageFile)
 	if err != nil {
 		return
 	}
@@ -238,7 +245,7 @@ func drawTime(capture model.Capture) (err error) {
 		dc.DrawString(capture.TimeDuration, float64(width-int(stringWidth)), float64(height-5))
 	}
 
-	err = dc.SavePNG(capture.Image)
+	err = dc.SavePNG(imageFile)
 	return
 }
 
@@ -335,10 +342,10 @@ func mergeCaptures(file *model.File) (err error) {
 	}
 
 	// 缩放、保存图片
-	o := strings.Split(file.TempDir, "\\")
-	out := strings.Join(o[0:len(o)-1], "\\")
+	o := strings.Split(file.TempDir, string(filepath.Separator))
+	out := strings.Join(o[0:len(o)-1], string(filepath.Separator))
 	outFile := strings.ReplaceAll(file.Name, file.Ext, ".jpg")
-	out = fmt.Sprintf("%v\\%v", out, outFile)
+	out = filepath.Join(out, outFile)
 	outImage := dc.Image()
 	resizeWidth := config.GetConfig().Capture.ResizeWidth
 	if resizeWidth > 0 {

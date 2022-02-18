@@ -46,6 +46,7 @@ func main() {
 			return
 		}
 		if err := capture.Capture(&file); err != nil {
+			capture.RecoverName(file)
 			log.Fatalln(err.Error())
 		}
 		capture.RecoverName(file)
