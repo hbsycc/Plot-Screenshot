@@ -10,6 +10,8 @@ import (
 var DB *sql.DB
 
 func InsertFiles() (err error) {
+	fmt.Println("sqlite3")
+
 	DB, err = sql.Open("sqlite3", "./database.db")
 	if err != nil {
 		log.Fatal(err)
